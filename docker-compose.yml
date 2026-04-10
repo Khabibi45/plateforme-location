@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  webapi:
+    image: plateforme-location-disques-webapi
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_HTTP_PORTS=8080
+      - ASPNETCORE_HTTPS_PORTS=8081
+      - ConnectionStrings__DiscogsDb=Host=postgres;Port=5432;Database=discogs_db;Username=discogs_user;Password=discogs_local_password
+      - UseInMemoryDatabase=false
+      - SeedDatabase=true
+      - RunMigrations=false
+    ports:
+      - "5000:8080"
+      - "5001:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: plateforme-discogs-db
+    environment:
+      POSTGRES_DB: discogs_db
+      POSTGRES_USER: discogs_user
+      POSTGRES_PASSWORD: discogs_local_password
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U discogs_user -d discogs_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
